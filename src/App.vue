@@ -13,7 +13,7 @@
 <style scoped lang="scss">
 nav {
   position: fixed;
-  top: 12px;
-  left: 12px;
+  top: 22px;
+  left: 22px;
 }
 </style>

@@ -1,1 +1,14 @@
 @import './base.css';
+
+.t-22 {
+  margin-top: 22px;
+}
+.b-22 {
+  margin-bottom: 22px;
+}
+.l-22 {
+  margin-left: 22px;
+}
+.r-22 {
+  margin-right: 22px;
+}
