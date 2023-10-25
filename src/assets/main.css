@@ -12,3 +12,9 @@
 .r-22 {
   margin-right: 22px;
 }
+
+.disabled {
+  opacity: 0.5;
+  touch-action: none;
+  pointer-events: none;
+}
