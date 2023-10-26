@@ -1,9 +1,9 @@
 <template>
-  <div class="wrapper" :class="{ 'disabled' : disabled }">
+  <div class="wrapper" :class="{ disabled: disabled }">
     <div class="dot-box" @click="onClick">
-      <div class="dot" :class="{ 'active' : active }" :style="{ 'left' : active ? '50%' : '0%' }"></div>
+      <div class="dot" :class="{ active: active }" :style="{ left: active ? '50%' : '0%' }"></div>
     </div>
-      <slot />
+    <slot />
   </div>
 </template>
 
@@ -13,19 +13,18 @@
 //===========================
 const props = defineProps({
   active: Boolean,
-  disabled: Boolean,
-});
+  disabled: Boolean
+})
 
-const emit = defineEmits(['update:active', 'click']);
+const emit = defineEmits(['update:active', 'click'])
 
 //===========================
 // Functions
 //===========================
-function onClick(){
-  emit('update:active', props.active ? false : true);
-  emit('click');
+function onClick() {
+  emit('update:active', props.active ? false : true)
+  emit('click')
 }
-
 </script>
 
 <style lang="scss" scoped>
@@ -35,19 +34,20 @@ $p: 5px;
   width: max-content;
   display: flex;
   align-items: center;
+  margin: 8px;
   .dot-box {
-    width: calc(2*$w);
+    width: calc(2 * $w);
     height: $w;
     background-color: #333;
-    border-radius: calc(2*$w);
+    border-radius: calc(2 * $w);
     position: relative;
     cursor: pointer;
     margin-right: 10px;
     .dot {
       position: absolute;
       top: 0%;
-      height: calc(100% - ($p *2));
-      width: calc(50% - ($p *2));
+      height: calc(100% - ($p * 2));
+      width: calc(50% - ($p * 2));
       margin: $p;
       background: #fff;
       border-radius: 50%;

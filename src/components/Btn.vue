@@ -1,5 +1,5 @@
 <template>
-  <button :class="{ 'disabled': disabled, 'active': def }"> {{ text }} </button>
+  <button :class="{ disabled: disabled, active: def }">{{ text }}</button>
 </template>
 
 <script setup>
@@ -9,9 +9,8 @@
 defineProps({
   text: String,
   def: Boolean,
-  disabled: Boolean,
+  disabled: Boolean
 })
-
 </script>
 
 <style lang="scss" scoped>

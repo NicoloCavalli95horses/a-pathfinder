@@ -1,5 +1,8 @@
 @import './base.css';
 
+.t-11 {
+  margin-top: 11px;
+}
 .t-22 {
   margin-top: 22px;
 }
@@ -17,4 +20,8 @@
   opacity: 0.5;
   touch-action: none;
   pointer-events: none;
+}
+
+.c-text {
+  text-align: center;
 }
