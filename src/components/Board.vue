@@ -10,11 +10,16 @@
           'start': start_index == (i * size + j),
           'end': end_index == (i * size + j),
           'active': indexes.includes(i * size + j),
+          'obstacle' : obstacles.includes(i * size + j)
         }"
       >
-        <div v-if="show_indexes" class="info"> <span>{{ i * size + j }}</span> </div>
+        <div v-if="show_indexes && !obstacles.includes(i * size + j)" class="info"> <span>{{ i * size + j }}</span> </div>
+        <div v-if="show_coordinates && neighbors[(i * size + j).toString()]?.x" class="info">
+          <span>x:{{ neighbors[(i * size + j).toString()].x.toFixed(1) }}</span>
+          <span>y:{{ neighbors[(i * size + j).toString()].y.toFixed(1) }}</span>
+        </div>
         <div v-if="show_f && neighbors[(i * size + j).toString()]?.f && !indexes.includes(i * size + j)" class="info">
-          <span>{{ (neighbors[(i * size + j).toString()].f / 10).toFixed(2) }}</span>
+          <span>{{ (neighbors[(i * size + j).toString()].f / 10).toFixed(1) }}</span>
         </div>
       </div>
     </template>
@@ -42,10 +47,13 @@ const props = defineProps({
   size: Number,
   shuffle: Number,
   show_f: Boolean,
+  tot_obstacles: Number,
   show_indexes: Boolean,
+  prevent_diagonals: Boolean,
+  show_coordinates: Boolean,
 })
 
-const emit = defineEmits(['solved'])
+const emit = defineEmits(['solved', 'nosolution'])
 
 // ===========================
 // Consts
@@ -55,6 +63,7 @@ const start_index  = ref( null );
 const active_index = ref( null );
 const end_index    = ref( null );
 const indexes      = ref( [] );
+const obstacles    = ref( [] );
 
 
 const start_cell = computed(() => {
@@ -74,49 +83,49 @@ const neighbors = computed(() => {
   }
   return {
     [active_index.value - props.size - 1]: function() { // top left
-      if ( active_index.value < props.size || !(active_index.value % props.size) ) { 
+      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value - props.size - 1) || active_index.value < props.size || !(active_index.value % props.size) ) { 
         return null;
       }
       return getNeighborObj(active_index.value - props.size - 1);
     }(),
     [active_index.value - props.size]: function() { // top
-      if ( active_index.value < props.size ) {
+      if ( obstacles.value.includes(active_index.value - props.size) || active_index.value < props.size ) {
         return null;
       }
       return getNeighborObj(active_index.value - props.size);
     }(),
     [active_index.value - props.size + 1]: function() { // top-right
-      if ( active_index.value < props.size || !((active_index.value + 1) % props.size) ) {
+      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value - props.size + 1) || active_index.value < props.size || !((active_index.value + 1) % props.size) ) {
         return null;
       }
       return getNeighborObj(active_index.value - props.size + 1);
     }(),
     [active_index.value - 1]: function() { // left
-      if ( !(active_index.value % props.size) ) {
+      if ( obstacles.value.includes(active_index.value - 1) || !(active_index.value % props.size) ) {
         return null;
       }
       return getNeighborObj(active_index.value - 1);
     }(),
     [active_index.value + 1]: function() { // right
-      if ( !((active_index.value + 1) % props.size) ) {
+      if ( obstacles.value.includes(active_index.value + 1) || !((active_index.value + 1) % props.size) ) {
         return null;
       }
       return getNeighborObj(active_index.value + 1);
     }(),
     [active_index.value + props.size - 1]: function() { // bottom left
-      if ( !(active_index.value % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value + props.size - 1) || !(active_index.value % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
         return null;
       }
       return getNeighborObj(active_index.value + props.size - 1);
     }(),
     [active_index.value + props.size]: function() { // bottom
-      if ( active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+      if ( obstacles.value.includes(active_index.value + props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
         return null;
       }
       return getNeighborObj(active_index.value + props.size);
     }(),
     [active_index.value + props.size + 1]: function() { // bottom right
-      if ( !((active_index.value + 1) % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value + props.size + 1) || !((active_index.value + 1) % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
         return null;
       }
       return getNeighborObj(active_index.value + props.size + 1);
@@ -133,7 +142,7 @@ function getNeighborObj( index ){
   const g = getG({ x, y });
   const h = getH({ x, y });
   const f = g + h;
-  return { g, h, f, index };
+  return { g, h, f, x, y, index };
 }
 
 function getG( cell ) {
@@ -157,6 +166,10 @@ function moveToNextCell() {
         && val.index != active_index.value
           && !indexes.value.includes(val.index));
 
+  if ( !valid_neighbors.length ) {
+    emit('nosolution');
+  }
+
   for (const n of valid_neighbors) {
     if ( n.f < min ) {
       min = n.f;
@@ -174,6 +187,19 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min
 }
 
+function setRandomObstacles() {
+  const set = new Set();
+  const pickRandom = () => {
+    const random = randomInt(1, Math.pow(props.size,2));
+    (random != start_index.value && random != end_index.value ) ? set.add( random ) : pickRandom();
+  }
+
+  for ( let i=0; i < props.tot_obstacles; i++ ) {
+    pickRandom();
+  }
+  return Array.from( set );
+}
+
 //===========================
 // Watcher
 //===========================
@@ -186,6 +212,7 @@ watch(() => props.shuffle, () => {
   active_index.value = start_index.value;
   end_index.value    = randomInt(1, props.size * props.size);
   indexes.value      = [ start_index.value ];
+  obstacles.value    = setRandomObstacles();
 });
 
 //===========================
@@ -197,6 +224,7 @@ onMounted(() => {
     active_index.value = start_index.value;
     end_index.value    = randomInt(1, props.size * props.size);
     indexes.value      = [ start_index.value ];
+    obstacles.value    = setRandomObstacles();
   })
 })
 
@@ -209,22 +237,27 @@ onMounted(() => {
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
-
   .cell {
     width: calc(100% / v-bind('props.size'));
     height: calc(100% / v-bind('props.size'));
-    border: 1px solid white;
-    &.start {
-      background-color: lightgreen;
-    }
-    &.end {
-      background-color: var(--color-secondary);
-    }
+    border: 1px solid #222;
     &.active {
       background-color: lightgreen;
     }
+    &.start {
+      background-color: green;
+    }
+    &.end {
+      background-color: blue;
+      &.active {
+        background-color: green;
+      }
+    }
     &.neighbor {
       background-color: var(--color-primary);
+    }
+    &.obstacle {
+      background-color: #444;
     }
     .info {
       display: grid;

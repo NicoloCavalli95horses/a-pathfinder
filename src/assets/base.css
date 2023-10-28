@@ -15,6 +15,7 @@
   font-weight: normal;
   user-select: none;
   overflow: hidden;
+  -webkit-tap-highlight-color:  rgba(255, 255, 255, 0); 
 }
 
 body {
