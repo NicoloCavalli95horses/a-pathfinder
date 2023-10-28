@@ -2,27 +2,19 @@
   <div class="wrapper">
     <template v-for="(n, i) in size" :key="n">
       <div
-        :ref="(el) => (cells_ref[i * size + j] = el)"
+        :ref="el => (cells_ref[i * size + j] = el)"
         v-for="(m, j) in size"
         :key="m"
         class="cell"
         :class="{
-          start: start_index == i * size + j,
-          end: end_index == i * size + j,
-          active: indexes.includes(i * size + j)
+          'start': start_index == (i * size + j),
+          'end': end_index == (i * size + j),
+          'active': indexes.includes(i * size + j),
         }"
       >
-        <div v-if="Object.keys(cells_rect).length && show_coordinates" class="info">
-          <span>x:{{ cells_rect[i * size + j].x / 10 }}</span>
-          <span>y:{{ cells_rect[i * size + j].y / 10 }}</span>
-        </div>
-        <div v-if="show_indexes" class="info">
-          <span>{{ i * size + j }}</span>
-        </div>
-        <div v-if="show_distances" class="info">
-          <span>f: {{ distances[i * size + j].f.toFixed(2) }}</span>
-          <span>g: {{ distances[i * size + j].g.toFixed(2) }}</span>
-          <span>h: {{ distances[i * size + j].h.toFixed(2) }}</span>
+        <div v-if="show_indexes" class="info"> <span>{{ i * size + j }}</span> </div>
+        <div v-if="show_f && neighbors[(i * size + j).toString()]?.f && !indexes.includes(i * size + j)" class="info">
+          <span>{{ (neighbors[(i * size + j).toString()].f / 10).toFixed(2) }}</span>
         </div>
       </div>
     </template>
@@ -33,105 +25,146 @@
 //===========================
 // Imports
 //===========================
-import { ref, reactive, computed, nextTick, onMounted, watch } from 'vue'
+import { 
+  ref,
+  watch,
+  reactive, 
+  computed,
+  onMounted,
+  nextTick,
+} from 'vue'
 
 //===========================
 // Props
 //===========================
 const props = defineProps({
-  size: Number,
-  show_coordinates: Boolean,
-  show_indexes: Boolean,
-  show_distances: Boolean,
   next: Number,
-  shuffle: Number
+  size: Number,
+  shuffle: Number,
+  show_f: Boolean,
+  show_indexes: Boolean,
 })
 
 const emit = defineEmits(['solved'])
 
-//===========================
+// ===========================
 // Consts
 //===========================
-const cells_ref = reactive({})
-const cells_rect = reactive({})
-const start_index = ref(0)
-const end_index = ref(randomInt(1, props.size * props.size))
-const active_index = ref(start_index.value)
-const indexes = ref([])
+const cells_ref    = reactive( {} );
+const start_index  = ref( null );
+const active_index = ref( null );
+const end_index    = ref( null );
+const indexes      = ref( [] );
 
-const distances = computed(() => {
-  const obj = {}
-  if (!Object.keys(cells_rect).length) {
-    return obj
-  }
-  for (const [key, cell] of Object.entries(cells_rect)) {
-    const g = getG(cell)
-    const h = getH(cell)
-    const f = g + h
-    obj[key] = { ...cell, g, h, f, index: key }
-  }
-  return obj
-})
+
+const start_cell = computed(() => {
+  if ( !Object.keys(cells_ref).length ) { return {} };
+  const { x, y } = cells_ref[ start_index.value ].getBoundingClientRect();
+  return { x, y };
+});
+const end_cell   = computed(() => {
+  if ( !Object.keys(cells_ref).length ) { return {} };
+  const { x, y } = cells_ref[ end_index.value ].getBoundingClientRect();
+  return { x, y };
+});
 
 const neighbors = computed(() => {
-  const obj = {
-    top_left: getTopBottom({ left: true, top: true }),
-    top: getTopBottom({ top: true }),
-    top_right: getTopBottom({ right: true, top: true }),
-    left: getCenter({ left: true }),
-    right: getCenter({ right: true }),
-    bottom_left: getTopBottom({ left: true, bottom: true }),
-    bottom: getTopBottom({ bottom: true }),
-    bottom_right: getTopBottom({ right: true, bottom: true })
+  if ( !Object.keys(cells_ref).length ) { 
+    return {}
   }
-  return obj
-})
+  return {
+    [active_index.value - props.size - 1]: function() { // top left
+      if ( active_index.value < props.size || !(active_index.value % props.size) ) { 
+        return null;
+      }
+      return getNeighborObj(active_index.value - props.size - 1);
+    }(),
+    [active_index.value - props.size]: function() { // top
+      if ( active_index.value < props.size ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value - props.size);
+    }(),
+    [active_index.value - props.size + 1]: function() { // top-right
+      if ( active_index.value < props.size || !((active_index.value + 1) % props.size) ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value - props.size + 1);
+    }(),
+    [active_index.value - 1]: function() { // left
+      if ( !(active_index.value % props.size) ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value - 1);
+    }(),
+    [active_index.value + 1]: function() { // right
+      if ( !((active_index.value + 1) % props.size) ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value + 1);
+    }(),
+    [active_index.value + props.size - 1]: function() { // bottom left
+      if ( !(active_index.value % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value + props.size - 1);
+    }(),
+    [active_index.value + props.size]: function() { // bottom
+      if ( active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value + props.size);
+    }(),
+    [active_index.value + props.size + 1]: function() { // bottom right
+      if ( !((active_index.value + 1) % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+        return null;
+      }
+      return getNeighborObj(active_index.value + props.size + 1);
+    }(),
+  }
+});
+
 
 //===========================
 // Functions
 //===========================
-function getG(cell) {
-  return getDistance({ start: cells_rect[start_index.value], end: cell })
+function getNeighborObj( index ){
+  const { x, y } = cells_ref[ index ].getBoundingClientRect();
+  const g = getG({ x, y });
+  const h = getH({ x, y });
+  const f = g + h;
+  return { g, h, f, index };
 }
 
-function getH(cell) {
-  return getDistance({ start: cell, end: cells_rect[end_index.value] })
+function getG( cell ) {
+  return getDistance({ start: start_cell.value, end: cell });
+}
+
+function getH( cell ) {
+  return getDistance({ start: cell, end: end_cell.value });
 }
 
 function getDistance({ start, end }) {
-  return Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2))
+  return Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
 }
 
-function getTopBottom({ left, right, top, bottom } = false) {
-  const acc = left ? -1 : right ? 1 : 0
-  const dir = top ? -1 : bottom ? 1 : 0
-  const i = active_index.value + acc + props.size * dir
-  return i >= 0 && i <= Object.keys(distances.value).length ? distances.value[i] : null
-}
+function moveToNextCell() {
+  let min = 9999;
+  let best_index = null;
+  const valid_neighbors = Object.values(neighbors.value).filter((val) => 
+    val != null
+      && val.index != start_index.value
+        && val.index != active_index.value
+          && !indexes.value.includes(val.index));
 
-function getCenter({ left, right } = false) {
-  const acc = left ? -1 : right ? 1 : 0
-  const i = active_index.value + acc
-  return i >= 0 && i <= Object.keys(distances.value).length ? distances.value[i] : null
-}
-
-function getIndex() {
-  let min = 9999
-  let best_index = null
-  const valid_neighbors = Object.values(neighbors.value).filter((val) => val != null)
   for (const n of valid_neighbors) {
-    if (
-      n?.f < min &&
-      !indexes.value.includes(parseInt(n?.index)) &&
-      n?.index != start_index.value &&
-      n?.index != active_index.value
-    ) {
-      min = n.f
-      best_index = parseInt(n.index)
+    if ( n.f < min ) {
+      min = n.f;
+      best_index = parseInt(n.index);
     }
   }
-  indexes.value.push(best_index)
-  active_index.value = best_index
+  indexes.value.push(best_index);
+  active_index.value = best_index;
   if (active_index.value == end_index.value) {
     emit('solved', indexes.value)
   }
@@ -141,44 +174,32 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min
 }
 
-function getCellRect() {
-  nextTick(() => {
-    for (const [i, cell] of Object.entries(cells_ref)) {
-      const rect = cell.getBoundingClientRect()
-      cells_rect[i] = {
-        x: rect.x,
-        y: rect.y
-      }
-    }
-  })
-}
-
 //===========================
 // Watcher
 //===========================
-watch(
-  () => props.next,
-  () => {
-    getIndex()
-  }
-)
+watch(() => props.next, () => {
+  moveToNextCell();
+});
 
-watch(
-  () => props.shuffle,
-  () => {
-    getCellRect()
-    end_index.value = randomInt(1, props.size * props.size)
-    indexes.value = []
-    active_index.value = start_index.value
-  }
-)
+watch(() => props.shuffle, () => {
+  start_index.value  = 0;
+  active_index.value = start_index.value;
+  end_index.value    = randomInt(1, props.size * props.size);
+  indexes.value      = [ start_index.value ];
+});
 
 //===========================
 // Life cycle
 //===========================
 onMounted(() => {
-  getCellRect()
+  nextTick(() => {
+    start_index.value  = 0;
+    active_index.value = start_index.value;
+    end_index.value    = randomInt(1, props.size * props.size);
+    indexes.value      = [ start_index.value ];
+  })
 })
+
 </script>
 
 <style lang="scss" scoped>
@@ -194,12 +215,15 @@ onMounted(() => {
     height: calc(100% / v-bind('props.size'));
     border: 1px solid white;
     &.start {
-      background-color: var(--color-primary);
+      background-color: lightgreen;
     }
     &.end {
       background-color: var(--color-secondary);
     }
     &.active {
+      background-color: lightgreen;
+    }
+    &.neighbor {
       background-color: var(--color-primary);
     }
     .info {
