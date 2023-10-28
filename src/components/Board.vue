@@ -9,8 +9,9 @@
         :class="{
           'start': start_index == (i * size + j),
           'end': end_index == (i * size + j),
-          'active': indexes.includes(i * size + j),
-          'obstacle' : obstacles.includes(i * size + j)
+          'trampled': indexes.includes(i * size + j),
+          'obstacle' : obstacles.includes(i * size + j),
+          'active' : active_index == (i * size + j)
         }"
       >
         <div v-if="show_indexes && !obstacles.includes(i * size + j)" class="info"> <span>{{ i * size + j }}</span> </div>
@@ -53,7 +54,11 @@ const props = defineProps({
   show_coordinates: Boolean,
 })
 
-const emit = defineEmits(['solved', 'nosolution'])
+const emit = defineEmits([
+  'solved',
+  'loaded',
+  'nosolution',
+])
 
 // ===========================
 // Consts
@@ -81,54 +86,95 @@ const neighbors = computed(() => {
   if ( !Object.keys(cells_ref).length ) { 
     return {}
   }
+  const top          = active_index.value - props.size;
+  const top_left     = active_index.value - props.size - 1;
+  const top_right    = active_index.value - props.size + 1;
+  const left         = active_index.value - 1;
+  const right        = active_index.value + 1;
+  const bottom       = active_index.value + props.size;
+  const bottom_left  = active_index.value + props.size - 1;
+  const bottom_right = active_index.value + props.size + 1;
+
   return {
-    [active_index.value - props.size - 1]: function() { // top left
-      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value - props.size - 1) || active_index.value < props.size || !(active_index.value % props.size) ) { 
+    [top_left]: function() {
+      if (
+        props.prevent_diagonals ||
+        obstacles.value.includes(top_left) ||
+        active_index.value < props.size ||
+        !(active_index.value % props.size)
+      ) { 
         return null;
       }
-      return getNeighborObj(active_index.value - props.size - 1);
+      return getNeighborObj(top_left);
     }(),
-    [active_index.value - props.size]: function() { // top
-      if ( obstacles.value.includes(active_index.value - props.size) || active_index.value < props.size ) {
+    [top]: function() {
+      if ( 
+        obstacles.value.includes(top) ||
+        active_index.value < props.size
+       ) {
         return null;
       }
-      return getNeighborObj(active_index.value - props.size);
+      return getNeighborObj(top);
     }(),
-    [active_index.value - props.size + 1]: function() { // top-right
-      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value - props.size + 1) || active_index.value < props.size || !((active_index.value + 1) % props.size) ) {
+    [top_right]: function() {
+      if (
+        props.prevent_diagonals ||
+        obstacles.value.includes(top_right) ||
+        active_index.value < props.size ||
+        !((active_index.value + 1) % props.size)
+      ) {
         return null;
       }
-      return getNeighborObj(active_index.value - props.size + 1);
+      return getNeighborObj(top_right);
     }(),
-    [active_index.value - 1]: function() { // left
-      if ( obstacles.value.includes(active_index.value - 1) || !(active_index.value % props.size) ) {
+    [left]: function() {
+      if (
+        obstacles.value.includes(left) ||
+        !(active_index.value % props.size)
+      ) {
         return null;
       }
-      return getNeighborObj(active_index.value - 1);
+      return getNeighborObj(left);
     }(),
-    [active_index.value + 1]: function() { // right
-      if ( obstacles.value.includes(active_index.value + 1) || !((active_index.value + 1) % props.size) ) {
+    [right]: function() {
+      if ( 
+        obstacles.value.includes(right) ||
+        !((active_index.value + 1) % props.size)
+      ) {
         return null;
       }
-      return getNeighborObj(active_index.value + 1);
+      return getNeighborObj(right);
     }(),
-    [active_index.value + props.size - 1]: function() { // bottom left
-      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value + props.size - 1) || !(active_index.value % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+    [bottom_left]: function() {
+      if (
+        props.prevent_diagonals ||
+        obstacles.value.includes(bottom_left) ||
+        !(active_index.value % props.size) ||
+        active_index.value >= (Math.pow(props.size, 2) - props.size)
+      ) {
         return null;
       }
-      return getNeighborObj(active_index.value + props.size - 1);
+      return getNeighborObj(bottom_left);
     }(),
-    [active_index.value + props.size]: function() { // bottom
-      if ( obstacles.value.includes(active_index.value + props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+    [bottom]: function() {
+      if (
+        obstacles.value.includes(bottom) ||
+        active_index.value >= (Math.pow(props.size, 2) - props.size)
+      ) {
         return null;
       }
-      return getNeighborObj(active_index.value + props.size);
+      return getNeighborObj(bottom);
     }(),
-    [active_index.value + props.size + 1]: function() { // bottom right
-      if ( props.prevent_diagonals || obstacles.value.includes(active_index.value + props.size + 1) || !((active_index.value + 1) % props.size) || active_index.value >= (Math.pow(props.size, 2) - props.size) ) {
+    [bottom_right]: function() {
+      if (
+        props.prevent_diagonals ||
+        obstacles.value.includes(bottom_right) ||
+        !((active_index.value + 1) % props.size) ||
+        active_index.value >= (Math.pow(props.size, 2) - props.size)
+      ) {
         return null;
       }
-      return getNeighborObj(active_index.value + props.size + 1);
+      return getNeighborObj(bottom_right);
     }(),
   }
 });
@@ -225,6 +271,7 @@ onMounted(() => {
     end_index.value    = randomInt(1, props.size * props.size);
     indexes.value      = [ start_index.value ];
     obstacles.value    = setRandomObstacles();
+    emit('loaded');
   })
 })
 
@@ -241,20 +288,25 @@ onMounted(() => {
     width: calc(100% / v-bind('props.size'));
     height: calc(100% / v-bind('props.size'));
     border: 1px solid #222;
+    border-radius: 4px;
+    &.trampled {
+      background-color: lightgreen;
+    }
     &.active {
+      animation: bounce;
+      animation-iteration-count: infinite;
+      animation-duration: 800ms;
+      animation-direction: alternate-reverse;
       background-color: lightgreen;
     }
     &.start {
       background-color: green;
     }
     &.end {
-      background-color: blue;
+      background-color: brown;
       &.active {
         background-color: green;
       }
-    }
-    &.neighbor {
-      background-color: var(--color-primary);
     }
     &.obstacle {
       background-color: #444;
@@ -267,6 +319,16 @@ onMounted(() => {
       font-family: monospace;
       font-size: 12px;
     }
+  }
+}
+
+
+@keyframes bounce {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>

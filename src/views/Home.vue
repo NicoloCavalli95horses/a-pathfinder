@@ -15,6 +15,7 @@
     :prevent_diagonals="show.diagonals"
     :tot_obstacles="tot_obstacles"
     :show_indexes="show.indexes"
+    @loaded="show.f_value = true"
     @solved="idx => { indexes = idx; solved = true; }"
     @nosolution="solvable = false"
   />
@@ -51,16 +52,16 @@ import Toggle from '../components/Toggle.vue';
 //===========================
 const next          = ref( 0 );
 const shuffle       = ref( 0 );
-const size          = ref( 25 );
+const size          = ref( 10 );
 const indexes       = ref( [] );
 const solved        = ref( false );
 const solvable      = ref( true );
 const tot_obstacles = ref( Math.round(Math.pow(size.value, 2)/2) );
 
 const show = reactive({
-  indexes: false,
-  f_value: false,
-  diagonals: false,
+  indexes:     false,
+  f_value:     false,
+  diagonals:   false,
   coordinates: false,
 });
 
@@ -76,6 +77,7 @@ function setToggles(value) {
     }
   }
 }
+
 </script>
 
 <style lang="scss" scoped>
@@ -110,7 +112,9 @@ nav {
 }
 
 h2 {
+  font-size: 26px;
   white-space: nowrap;
+  text-shadow: 2px 2px #222;
 }
 
 </style>
