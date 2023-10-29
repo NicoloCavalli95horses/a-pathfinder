@@ -187,7 +187,7 @@ function getNeighborObj( index ){
   const { x, y } = cells_ref[ index ].getBoundingClientRect();
   const g = getG({ x, y });
   const h = getH({ x, y });
-  const f = g + h;
+  const f = (g*0.5) + h;
   return { g, h, f, x, y, index };
 }
 
@@ -290,23 +290,20 @@ onMounted(() => {
     border: 1px solid #222;
     border-radius: 4px;
     &.trampled {
-      background-color: lightgreen;
+      background-color: var(--color-primary);
     }
     &.active {
       animation: bounce;
       animation-iteration-count: infinite;
       animation-duration: 800ms;
       animation-direction: alternate-reverse;
-      background-color: lightgreen;
+      background-color: var(--color-primary);;
     }
     &.start {
-      background-color: green;
+      background-color: var(--color-secondary);
     }
     &.end {
-      background-color: brown;
-      &.active {
-        background-color: green;
-      }
+      background-color: var(--color-secondary);
     }
     &.obstacle {
       background-color: #444;

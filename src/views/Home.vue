@@ -16,20 +16,25 @@
     :tot_obstacles="tot_obstacles"
     :show_indexes="show.indexes"
     @loaded="show.f_value = true"
-    @solved="idx => { indexes = idx; solved = true; }"
-    @nosolution="solvable = false"
+    @solved="onSolved"
+    @nosolution="onNosolution"
   />
 
   <template v-if="solved || !solvable">
     <div class="fixed-center">
-      <h2 v-if="solved">Solved in {{ indexes.length }} steps</h2>
+      <h2 v-if="solved">Solved in {{ steps.length }} steps</h2>
       <h2 v-else>No solution found</h2>
     </div>
   </template>
 
-  <div class="fixed-right">
+  <div class="fixed-bottom-right">
     <Btn class="t-22" :def="true" text="next" :disabled="solved || !solvable" @click="next++" />
     <Btn class="t-22" text="shuffle" @click="() => { shuffle++; solved = false; solvable = true; }" />
+  </div>
+
+  <div v-if="tot_plays" class="fixed-top-right">
+    solved: {{ (tot_solved *100 / tot_plays).toFixed(2) }}% <br>
+    avg.steps: {{ avg_steps.toFixed(2) }}
   </div>
 </template>
 
@@ -52,11 +57,15 @@ import Toggle from '../components/Toggle.vue';
 //===========================
 const next          = ref( 0 );
 const shuffle       = ref( 0 );
-const size          = ref( 10 );
-const indexes       = ref( [] );
+const size          = ref( 16 );
+const steps         = ref( [] );
+const avg_steps     = ref( 0 );
 const solved        = ref( false );
 const solvable      = ref( true );
+const tot_solved    = ref( 0 );
+const tot_plays     = ref( 0 );
 const tot_obstacles = ref( Math.round(Math.pow(size.value, 2)/2) );
+const tot_steps     = ref( 0 );
 
 const show = reactive({
   indexes:     false,
@@ -76,6 +85,20 @@ function setToggles(value) {
       show[key] = false
     }
   }
+}
+
+function onSolved(idx) {
+  tot_plays.value++;
+  tot_solved.value++;
+  steps.value = idx;
+  solved.value = true;
+  tot_steps.value += idx.length;
+  avg_steps.value = tot_steps.value / tot_solved.value;
+}
+
+function onNosolution() {
+  solvable.value = false;
+  tot_plays.value++;
 }
 
 </script>
@@ -99,9 +122,15 @@ nav {
   padding: 22px;
 }
 
-.fixed-right {
+.fixed-bottom-right {
   position: fixed;
   bottom: 22px;
+  right: 22px;
+}
+
+.fixed-top-right {
+  position: fixed;
+  top: 22px;
   right: 22px;
 }
 .fixed-center {
