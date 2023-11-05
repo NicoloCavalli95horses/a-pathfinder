@@ -2,8 +2,9 @@
   <nav v-if="isDesktop">
     <Toggle v-model:active="show.indexes" @click="setToggles('indexes')">Show indexes</Toggle>
     <Toggle v-model:active="show.coordinates" @click="setToggles('coordinates')">Show coordinates</Toggle>
-    <Toggle v-model:active="show.diagonals" @click="setToggles('diagonals')">No diagonals</Toggle>
+    <Toggle v-model:active="show.diagonals">No diagonals</Toggle>
     <Toggle v-model:active="show.f_value" @click="setToggles('f_value')">Show neighbors F value</Toggle>
+    <Toggle v-model:active="show.auto">Autocomplete</Toggle>
   </nav>
   <Board
     class="board"
@@ -15,6 +16,7 @@
     :prevent_diagonals="show.diagonals"
     :tot_obstacles="tot_obstacles"
     :show_indexes="show.indexes"
+    :autocomplete="show.auto"
     @loaded="show.f_value = true"
     @solved="onSolved"
     @nosolution="onNosolution"
@@ -68,6 +70,7 @@ const tot_obstacles = ref( Math.round(Math.pow(size.value, 2)/2) );
 const tot_steps     = ref( 0 );
 
 const show = reactive({
+  auto:        false,
   indexes:     false,
   f_value:     false,
   diagonals:   false,
@@ -94,11 +97,13 @@ function onSolved(idx) {
   solved.value = true;
   tot_steps.value += idx.length;
   avg_steps.value = tot_steps.value / tot_solved.value;
+  show.auto = false;
 }
 
 function onNosolution() {
   solvable.value = false;
   tot_plays.value++;
+  show.auto = false;
 }
 
 </script>

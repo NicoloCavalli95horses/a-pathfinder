@@ -18,8 +18,8 @@ button {
   width: max-content;
   text-decoration: none;
   border: none;
-  padding: 1rem 2rem;
-  border-radius: 25px;
+  padding: 14px 18px;
+  border-radius: 6px;
   letter-spacing: 0.4rem;
   cursor: pointer;
   transition-duration: 400ms;

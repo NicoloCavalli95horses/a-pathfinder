@@ -52,6 +52,7 @@ const props = defineProps({
   show_indexes: Boolean,
   prevent_diagonals: Boolean,
   show_coordinates: Boolean,
+  autocomplete: Boolean,
 })
 
 const emit = defineEmits([
@@ -69,6 +70,7 @@ const active_index = ref( null );
 const end_index    = ref( null );
 const indexes      = ref( [] );
 const obstacles    = ref( [] );
+const interval     = ref( null );
 
 
 const start_cell = computed(() => {
@@ -214,6 +216,8 @@ function moveToNextCell() {
 
   if ( !valid_neighbors.length ) {
     emit('nosolution');
+    clearInterval( interval.value );
+    interval.value = null;
   }
 
   for (const n of valid_neighbors) {
@@ -225,7 +229,9 @@ function moveToNextCell() {
   indexes.value.push(best_index);
   active_index.value = best_index;
   if (active_index.value == end_index.value) {
-    emit('solved', indexes.value)
+    emit('solved', indexes.value);
+    clearInterval( interval.value );
+    interval.value = null;
   }
 }
 
@@ -260,6 +266,13 @@ watch(() => props.shuffle, () => {
   indexes.value      = [ start_index.value ];
   obstacles.value    = setRandomObstacles();
 });
+
+watch(() => props.autocomplete, (val) => {
+  if ( !val ) { return; }
+  interval.value = setInterval(() => {
+     moveToNextCell();
+   }, 200)
+})
 
 //===========================
 // Life cycle
